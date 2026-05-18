@@ -16,6 +16,24 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Stellar](https://img.shields.io/badge/Stellar-testnet%20%7C%20mainnet-7D00FF.svg)](https://stellar.org)
 
+## Documentation Index
+
+| Page                                                 | Context                                                                           |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------- |
+| [Contributing](CONTRIBUTING.md)                      | Set up a contributor workflow, open issues, or submit pull requests.              |
+| [Security](SECURITY.md)                              | Report vulnerabilities or understand the project security policy.                 |
+| [Changelog](CHANGELOG.md)                            | Track released and unreleased project changes.                                    |
+| [Getting Started](guides/getting-started.md)         | Run StellarCrop locally and walk through your first test Batch.                   |
+| [Self Hosting](guides/self-hosting.md)               | Deploy StellarCrop for a Cooperative, Warehouse, or agri-fintech.                 |
+| [Registering A Batch](guides/registering-a-batch.md) | Create the off-chain record for a physical Commodity lot.                         |
+| [Tokenizing A Batch](guides/tokenizing-a-batch.md)   | Issue Stellar tokens for a registered Batch.                                      |
+| [Investor Onboarding](guides/investor-onboarding.md) | Understand KYC, purchasing, portfolio, Settlement, and Redemption as an Investor. |
+| [Settlement Guide](guides/settlement-guide.md)       | Settle a sold Batch and distribute proceeds to token holders.                     |
+| [Redemption Guide](guides/redemption-guide.md)       | Request or manage physical delivery of a Commodity.                               |
+| [Cooperative Setup](guides/cooperative-setup.md)     | Configure Cooperative members, treasury, and revenue splits.                      |
+| [KYC Integration](guides/kyc-integration.md)         | Implement or extend Sumsub, Persona, or manual KYC flows.                         |
+| [OpenAPI Specification](api/openapi.yaml)            | Inspect the REST API contract for Operator, Investor, and webhook routes.         |
+
 ## What Is StellarCrop?
 
 African smallholder farmers often hold real economic assets in the form of stored crops, but they cannot easily borrow against them, attract investors, or sell fractional ownership. The missing piece is a trusted digital mechanism that represents physical commodity custody without forcing every buyer to inspect a warehouse receipt by hand.
