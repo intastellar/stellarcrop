@@ -159,6 +159,8 @@ stellarcrop/
 │       ├── src/app/          # Next.js App Router pages
 │       ├── src/components/   # shadcn/ui and app components
 │       └── src/store/        # Zustand stores
+├── contracts/
+│   └── test-contract/        # Minimal Soroban contract validated by CI
 ├── docs/
 │   ├── guides/               # Operator, Investor, and contributor guides
 │   └── api/                  # OpenAPI specification

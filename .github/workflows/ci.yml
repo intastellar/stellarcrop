@@ -20,7 +20,13 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm --recursive run lint
       - run: pnpm --recursive run typecheck
       - run: pnpm --recursive run test
+      - run: cargo test --manifest-path contracts/Cargo.toml --workspace --locked
+      - run: cargo build --manifest-path contracts/Cargo.toml --workspace --target wasm32-unknown-unknown --release --locked
