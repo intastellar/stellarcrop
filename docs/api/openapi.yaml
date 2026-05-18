@@ -1,0 +1,1400 @@
+openapi: 3.1.0
+info:
+  title: StellarCrop API
+  version: 0.1.0
+  description: REST API for StellarCrop, an open-source platform for tokenized agricultural warehouse receipts on Stellar.
+servers:
+  - url: http://localhost:3000
+security:
+  - BearerAuth: []
+tags:
+  - name: batches
+  - name: documents
+  - name: investors
+  - name: settlements
+  - name: redemptions
+  - name: cooperatives
+  - name: toml
+  - name: invest
+  - name: webhooks
+paths:
+  /api/batches:
+    get:
+      tags: [batches]
+      summary: List operator batches
+      description: Returns Batches visible to the authenticated Operator. This endpoint has no Stellar side effects and does not change Batch state. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Batches returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Batch"
+              examples:
+                success:
+                  value:
+                    - id: batch_001
+                      commodityType: maize
+                      weightKg: 10000
+                      grade: Grade A
+                      harvestDate: "2026-01-10"
+                      expiryDate: "2026-10-10"
+                      assetCode: MAIZE01
+                      issuerPublicKey: GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF
+                      status: tokenized
+                      warehouseId: wh_001
+                      warehouseName: Lagos Grain Warehouse
+                      warehouseLocation: Lagos, Nigeria
+                      cooperativeId: coop_001
+                      description: Grade A maize stored under sealed custody.
+                      createdAt: "2026-05-18T10:00:00Z"
+                      updatedAt: "2026-05-18T10:00:00Z"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    post:
+      tags: [batches]
+      summary: Create a Batch
+      description: Registers an off-chain commodity lot before tokenization. The new Batch starts in `registered` state and does not create a Stellar asset yet. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBatchRequest"
+            examples:
+              maize:
+                value:
+                  commodityType: maize
+                  weightKg: 10000
+                  grade: Grade A
+                  harvestDate: "2026-01-10"
+                  expiryDate: "2026-10-10"
+                  warehouseId: wh_001
+                  cooperativeId: coop_001
+                  description: Grade A maize in sealed warehouse custody.
+      responses:
+        "201":
+          description: Batch created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Batch"
+              examples:
+                success:
+                  value:
+                    id: batch_001
+                    commodityType: maize
+                    weightKg: 10000
+                    grade: Grade A
+                    harvestDate: "2026-01-10"
+                    expiryDate: "2026-10-10"
+                    assetCode: null
+                    issuerPublicKey: null
+                    status: registered
+                    warehouseId: wh_001
+                    warehouseName: Lagos Grain Warehouse
+                    warehouseLocation: Lagos, Nigeria
+                    cooperativeId: coop_001
+                    description: Grade A maize in sealed warehouse custody.
+                    createdAt: "2026-05-18T10:00:00Z"
+                    updatedAt: "2026-05-18T10:00:00Z"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [batches]
+      summary: Get a Batch
+      description: Returns one operator-visible Batch by ID. It includes custody metadata, token metadata, and lifecycle state. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200": {$ref: "#/components/responses/BatchOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    patch:
+      tags: [batches]
+      summary: Update a Batch
+      description: Updates editable Batch metadata before tokenization. It does not issue tokens or change lifecycle state by itself. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBatchRequest"
+            examples:
+              update:
+                value:
+                  commodityType: maize
+                  weightKg: 12000
+                  grade: Premium
+                  harvestDate: "2026-01-10"
+                  expiryDate: "2026-10-10"
+                  warehouseId: wh_001
+                  description: Updated weight after warehouse audit.
+      responses:
+        "200": {$ref: "#/components/responses/BatchOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    delete:
+      tags: [batches]
+      summary: Delete a Batch
+      description: Deletes a Batch record when it is still safe to remove. Implementations should reject deletion once a Batch is tokenized or active. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Batch deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                success:
+                  value:
+                    message: Batch deleted.
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}/tokenize:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [batches]
+      summary: Tokenize a Batch
+      description: Issues a Stellar native asset for a registered Batch. On success, the Batch transitions to `tokenized`; Stellar transaction construction is contributor-owned implementation work. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenizeRequest"
+            examples:
+              tokenize:
+                value:
+                  assetCode: MAIZE01
+                  issuerPublicKey: GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF
+                  distributorPublicKey: GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBDIST
+      responses:
+        "200": {$ref: "#/components/responses/BatchOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}/settle:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [batches, settlements]
+      summary: Settle a Batch
+      description: Records sale proceeds and starts proceeds distribution to token holders. On success, the Batch transitions to `settled` and a `SettlementEvent` is created; large-holder distribution depends on the future Soroban contract. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettleRequest"
+            examples:
+              settle:
+                value:
+                  saleProceedsAmount: "10000.00"
+                  settlementCurrency: USDC
+                  buyerReference: BUYER-2026-001
+      responses:
+        "200":
+          description: Settlement recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettlementEvent"
+              examples:
+                success:
+                  value:
+                    id: settlement_001
+                    batchId: batch_001
+                    assetCode: MAIZE01
+                    saleProceedsAmount: "10000.00"
+                    settlementCurrency: USDC
+                    holderCount: 3
+                    txHash: abc123
+                    settledAt: "2026-05-18T11:00:00Z"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}/expire:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [batches]
+      summary: Expire a Batch
+      description: Marks a Batch as expired when it is no longer suitable for sale or token holder participation. This changes lifecycle state to `expired` without distributing proceeds. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200": {$ref: "#/components/responses/BatchOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}/documents:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [documents]
+      summary: List Batch documents
+      description: Returns uploaded documents for a Batch, including WarehouseReceipt and optional certificates. This has no Stellar side effects. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Documents returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BatchDocument"
+              examples:
+                success:
+                  value:
+                    - id: doc_001
+                      batchId: batch_001
+                      type: warehouse_receipt
+                      fileName: receipt.pdf
+                      sha256: 6f1ed002ab5595859014ebf0951522d9
+                      createdAt: "2026-05-18T10:00:00Z"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    post:
+      tags: [documents]
+      summary: Upload a Batch document
+      description: Uploads a WarehouseReceipt or supporting certificate for a Batch. The document is hashed and stored, but the hash is only anchored on Stellar during tokenization. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [type, file]
+              properties:
+                type:
+                  $ref: "#/components/schemas/DocumentType"
+                file:
+                  type: string
+                  format: binary
+            examples:
+              receipt:
+                value:
+                  type: warehouse_receipt
+                  file: receipt.pdf
+      responses:
+        "201":
+          description: Document uploaded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BatchDocument"
+              examples:
+                success:
+                  value:
+                    id: doc_001
+                    batchId: batch_001
+                    type: warehouse_receipt
+                    fileName: receipt.pdf
+                    sha256: 6f1ed002ab5595859014ebf0951522d9
+                    createdAt: "2026-05-18T10:00:00Z"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}/documents/{docId}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+      - $ref: "#/components/parameters/DocId"
+    delete:
+      tags: [documents]
+      summary: Delete a Batch document
+      description: Removes an uploaded document from the Batch record. Implementations should reject deletion once the document hash has been anchored on Stellar. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Document deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                success:
+                  value:
+                    message: Document deleted.
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}/investors:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [investors]
+      summary: List Batch Investors
+      description: Returns holders and allowlist entries for a Batch asset. Balances and trustline status may be sourced from Horizon. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Investors returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Investor"
+              examples:
+                success:
+                  value:
+                    - address: GINVESTORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                      balance: "250.00"
+                      trustlineStatus: authorized
+                      kycStatus: passed
+                      approvedAt: "2026-05-18T12:00:00Z"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}/investors/{address}/approve:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+      - $ref: "#/components/parameters/Address"
+    post:
+      tags: [investors]
+      summary: Approve an Investor
+      description: Authorizes an Investor address to hold the Batch asset. This triggers Stellar trustline authorization when implemented. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200": {$ref: "#/components/responses/InvestorOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}/investors/{address}/revoke:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+      - $ref: "#/components/parameters/Address"
+    post:
+      tags: [investors]
+      summary: Revoke Investor authorization
+      description: Revokes an Investor's permission to hold or receive the Batch asset. This uses Stellar Authorization Revocable behaviour when implemented. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200": {$ref: "#/components/responses/InvestorOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}/investors/{address}/freeze:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+      - $ref: "#/components/parameters/Address"
+    post:
+      tags: [investors]
+      summary: Freeze an Investor trustline
+      description: Freezes an Investor trustline for the Batch asset during a dispute or compliance review. This is a protocol-level Stellar compliance action when implemented. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200": {$ref: "#/components/responses/InvestorOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/batches/{id}/investors/bulk-approve:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [investors]
+      summary: Bulk approve Investors
+      description: Approves multiple Investor addresses for the Batch asset. Implementations should authorize each address on-chain and report partial failures clearly. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkApproveRequest"
+            examples:
+              approve:
+                value:
+                  addresses:
+                    - GINVESTORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                    - GINVESTORBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+      responses:
+        "200":
+          description: Investors approved.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  approved:
+                    type: array
+                    items:
+                      type: string
+              examples:
+                success:
+                  value:
+                    approved:
+                      - GINVESTORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/settlements:
+    get:
+      tags: [settlements]
+      summary: List Settlement events
+      description: Returns SettlementEvent records for the Operator. This endpoint is read-only and does not interact with Stellar. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Settlements returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SettlementEvent"
+              examples:
+                success:
+                  value:
+                    - id: settlement_001
+                      batchId: batch_001
+                      assetCode: MAIZE01
+                      saleProceedsAmount: "10000.00"
+                      settlementCurrency: USDC
+                      holderCount: 3
+                      txHash: abc123
+                      settledAt: "2026-05-18T11:00:00Z"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    post:
+      tags: [settlements]
+      summary: Create a Settlement event
+      description: Creates a SettlementEvent record directly. Most clients should use `/api/batches/{id}/settle` because it also handles Batch state transitions. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettleRequest"
+            examples:
+              create:
+                value:
+                  saleProceedsAmount: "10000.00"
+                  settlementCurrency: USDC
+      responses:
+        "201": {$ref: "#/components/responses/SettlementCreated"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/settlements/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [settlements]
+      summary: Get a Settlement event
+      description: Returns one SettlementEvent by ID. It includes the sale proceeds amount, holder count, currency, and Stellar transaction hash when available. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200": {$ref: "#/components/responses/SettlementCreated"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/redemptions:
+    get:
+      tags: [redemptions]
+      summary: List Redemption requests
+      description: Returns Redemption requests for Operator review. This endpoint is read-only and does not claw back tokens. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Redemptions returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RedemptionRecord"
+              examples:
+                success:
+                  value:
+                    - id: redemption_001
+                      batchId: batch_001
+                      investorAddress: GINVESTORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                      quantityKg: 100
+                      deliveryAddress: 12 Warehouse Road, Lagos
+                      requestedDate: "2026-06-01"
+                      status: pending
+                      voucherHash: null
+                      createdAt: "2026-05-18T12:00:00Z"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/redemptions/{id}/approve:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      tags: [redemptions]
+      summary: Approve a Redemption
+      description: Approves a pending Redemption request and prepares token clawback plus voucher anchoring. The automated Soroban-backed flow is a contributor task. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200": {$ref: "#/components/responses/RedemptionOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/redemptions/{id}/reject:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    patch:
+      tags: [redemptions]
+      summary: Reject a Redemption
+      description: Rejects a pending Redemption request. The Investor keeps their tokens and can submit a new request or wait for Settlement. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200": {$ref: "#/components/responses/RedemptionOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/cooperatives:
+    get:
+      tags: [cooperatives]
+      summary: List Cooperatives
+      description: Returns Cooperatives managed by the authenticated Operator. This has no Stellar side effects. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Cooperatives returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Cooperative"
+              examples:
+                success:
+                  value:
+                    - id: coop_001
+                      name: North Central Maize Cooperative
+                      country: Nigeria
+                      issuerPublicKey: GCOOPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                      cooperativeCutBps: 500
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    post:
+      tags: [cooperatives]
+      summary: Create a Cooperative
+      description: Creates a Cooperative record and revenue split configuration. The split can apply to future Batches but must be locked once a Batch is tokenized. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCooperativeRequest"
+            examples:
+              create:
+                value:
+                  name: North Central Maize Cooperative
+                  registrationNumber: NG-COOP-001
+                  country: Nigeria
+                  description: Farmer cooperative pooling maize batches.
+                  issuerPublicKey: GCOOPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                  cooperativeCutBps: 500
+      responses:
+        "201":
+          description: Cooperative created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cooperative"
+              examples:
+                success:
+                  value:
+                    id: coop_001
+                    name: North Central Maize Cooperative
+                    country: Nigeria
+                    issuerPublicKey: GCOOPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                    cooperativeCutBps: 500
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/cooperatives/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [cooperatives]
+      summary: Get a Cooperative
+      description: Returns one Cooperative and its current revenue split configuration. This does not modify Batches or member records. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Cooperative returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cooperative"
+              examples:
+                success:
+                  value:
+                    id: coop_001
+                    name: North Central Maize Cooperative
+                    country: Nigeria
+                    issuerPublicKey: GCOOPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                    cooperativeCutBps: 500
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    patch:
+      tags: [cooperatives]
+      summary: Update a Cooperative
+      description: Updates Cooperative metadata or revenue split for future Batches. Implementations should prevent changes that affect tokenized or active Batches. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCooperativeRequest"
+            examples:
+              update:
+                value:
+                  name: North Central Maize Cooperative
+                  country: Nigeria
+                  issuerPublicKey: GCOOPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                  cooperativeCutBps: 400
+      responses:
+        "200":
+          description: Cooperative updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cooperative"
+              examples:
+                success:
+                  value:
+                    id: coop_001
+                    name: North Central Maize Cooperative
+                    country: Nigeria
+                    issuerPublicKey: GCOOPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                    cooperativeCutBps: 400
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+    delete:
+      tags: [cooperatives]
+      summary: Delete a Cooperative
+      description: Deletes a Cooperative record when no active Batch depends on it. Implementations should reject deletion for Cooperatives with tokenized or active Batches. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Cooperative deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                success:
+                  value:
+                    message: Cooperative deleted.
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/toml/generate:
+    post:
+      tags: [toml]
+      summary: Generate stellar.toml metadata
+      description: Generates Stellar TOML metadata for a Batch asset. The generator should include asset code, issuer, Commodity, grade, and WarehouseReceipt hash; implementation is a contributor task. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [batchId]
+              properties:
+                batchId:
+                  type: string
+            examples:
+              generate:
+                value:
+                  batchId: batch_001
+      responses:
+        "200":
+          description: TOML generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TomlResponse"
+              examples:
+                success:
+                  value:
+                    toml: "[[CURRENCIES]]\ncode=\"MAIZE01\"\nissuer=\"GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF\""
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/toml/preview:
+    get:
+      tags: [toml]
+      summary: Preview stellar.toml metadata
+      description: Returns a preview of generated TOML metadata before publishing. This has no Stellar side effects and is intended for Operator review. Requires Bearer JWT and operator role.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: TOML preview returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TomlResponse"
+              examples:
+                success:
+                  value:
+                    toml: "[[CURRENCIES]]\ncode=\"MAIZE01\""
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/invest/batches:
+    get:
+      tags: [invest]
+      summary: List investable Batches
+      description: Returns Batches visible to authenticated Investors. These are public-facing listings filtered for Investor eligibility and availability. Requires Bearer JWT only.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Investable Batches returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Batch"
+              examples:
+                success:
+                  value:
+                    - id: batch_001
+                      commodityType: maize
+                      weightKg: 10000
+                      grade: Grade A
+                      harvestDate: "2026-01-10"
+                      expiryDate: "2026-10-10"
+                      assetCode: MAIZE01
+                      issuerPublicKey: GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF
+                      status: active
+                      warehouseId: wh_001
+                      warehouseName: Lagos Grain Warehouse
+                      warehouseLocation: Lagos, Nigeria
+                      cooperativeId: coop_001
+                      description: Grade A maize.
+                      createdAt: "2026-05-18T10:00:00Z"
+                      updatedAt: "2026-05-18T10:00:00Z"
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/invest/batches/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [invest]
+      summary: Get investable Batch details
+      description: Returns Investor-facing Batch details. The response helps Investors review Commodity, Warehouse, grade, expiry, and token metadata before purchase. Requires Bearer JWT only.
+      security:
+        - BearerAuth: []
+      responses:
+        "200": {$ref: "#/components/responses/BatchOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/invest/batches/{id}/purchase:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [invest]
+      summary: Purchase Batch tokens
+      description: Starts a token purchase for an authenticated Investor. The Investor must be KYC-approved and authorized for the asset; purchase transaction construction is contributor-owned implementation work. Requires Bearer JWT only.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseRequest"
+            examples:
+              purchase:
+                value:
+                  quantity: "250.00"
+                  currency: USDC
+      responses:
+        "200":
+          description: Purchase initiated or completed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResult"
+              examples:
+                success:
+                  value:
+                    txHash: abc123
+                    ledger: 123456
+                    successful: true
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/invest/batches/{id}/redeem:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    post:
+      tags: [invest, redemptions]
+      summary: Request physical Redemption
+      description: Creates a RedemptionRequest for physical delivery of the Commodity. The request starts in `pending` state and requires Operator review before tokens are clawed back. Requires Bearer JWT only.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RedemptionRequest"
+            examples:
+              redeem:
+                value:
+                  quantityKg: 100
+                  deliveryAddress: 12 Warehouse Road, Lagos
+                  requestedDate: "2026-06-01"
+      responses:
+        "201": {$ref: "#/components/responses/RedemptionOk"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/invest/portfolio:
+    get:
+      tags: [invest]
+      summary: Get Investor portfolio
+      description: Returns holdings for the authenticated Investor across Batches. Balances may be queried from Horizon and joined with Batch metadata. Requires Bearer JWT only.
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Portfolio returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Portfolio"
+              examples:
+                success:
+                  value:
+                    totalBatches: 1
+                    totalInvested: "250.00"
+                    holdings:
+                      - batchId: batch_001
+                        assetCode: MAIZE01
+                        commodityType: maize
+                        balance: "250.00"
+                        estimatedValue: "255.00"
+                        batchStatus: active
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+  /api/webhooks/kyc:
+    post:
+      tags: [webhooks]
+      summary: Receive KYC webhook
+      description: Receives KYC completion events from Sumsub, Persona, or another configured provider. The route is public because providers call it directly, but implementations must verify provider signatures before creating records or authorizing trustlines.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+            examples:
+              sumsub:
+                value:
+                  type: applicantReviewed
+                  externalUserId: GINVESTORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                  reviewResult:
+                    reviewAnswer: GREEN
+      responses:
+        "200":
+          description: Webhook accepted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+              examples:
+                success:
+                  value:
+                    message: Webhook accepted.
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "500": {$ref: "#/components/responses/InternalError"}
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: batch_001
+    DocId:
+      name: docId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: doc_001
+    Address:
+      name: address
+      in: path
+      required: true
+      schema:
+        type: string
+      example: GINVESTORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  responses:
+    BatchOk:
+      description: Batch returned.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Batch"
+          examples:
+            success:
+              value:
+                id: batch_001
+                commodityType: maize
+                weightKg: 10000
+                grade: Grade A
+                harvestDate: "2026-01-10"
+                expiryDate: "2026-10-10"
+                assetCode: MAIZE01
+                issuerPublicKey: GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF
+                status: active
+                warehouseId: wh_001
+                warehouseName: Lagos Grain Warehouse
+                warehouseLocation: Lagos, Nigeria
+                cooperativeId: coop_001
+                description: Grade A maize.
+                createdAt: "2026-05-18T10:00:00Z"
+                updatedAt: "2026-05-18T10:00:00Z"
+    InvestorOk:
+      description: Investor returned.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Investor"
+          examples:
+            success:
+              value:
+                address: GINVESTORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                balance: "250.00"
+                trustlineStatus: authorized
+                kycStatus: passed
+                approvedAt: "2026-05-18T12:00:00Z"
+    SettlementCreated:
+      description: Settlement returned.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SettlementEvent"
+          examples:
+            success:
+              value:
+                id: settlement_001
+                batchId: batch_001
+                assetCode: MAIZE01
+                saleProceedsAmount: "10000.00"
+                settlementCurrency: USDC
+                holderCount: 3
+                txHash: abc123
+                settledAt: "2026-05-18T11:00:00Z"
+    RedemptionOk:
+      description: Redemption returned.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RedemptionRecord"
+          examples:
+            success:
+              value:
+                id: redemption_001
+                batchId: batch_001
+                investorAddress: GINVESTORAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                quantityKg: 100
+                deliveryAddress: 12 Warehouse Road, Lagos
+                requestedDate: "2026-06-01"
+                status: pending
+                voucherHash: null
+                createdAt: "2026-05-18T12:00:00Z"
+    BadRequest:
+      description: Bad request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            error:
+              value:
+                message: Invalid request.
+                code: bad_request
+    Unauthorized:
+      description: Missing or invalid Bearer JWT.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            error:
+              value:
+                message: Authentication required.
+                code: unauthorized
+    Forbidden:
+      description: Authenticated user is not allowed to perform this action.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            error:
+              value:
+                message: Operator role required.
+                code: forbidden
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            error:
+              value:
+                message: Resource not found.
+                code: not_found
+    InternalError:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            error:
+              value:
+                message: Internal server error.
+                code: internal_error
+  schemas:
+    CommodityType:
+      type: string
+      enum: [maize, rice, cassava, soybean, cocoa, palm_oil, wheat, sorghum]
+    BatchStatus:
+      type: string
+      enum: [registered, tokenized, active, settled, redeemed, expired]
+    DocumentType:
+      type: string
+      enum: [warehouse_receipt, grading_certificate, phytosanitary_certificate, other]
+    RedemptionStatus:
+      type: string
+      enum: [pending, approved, rejected, completed]
+    SettlementCurrency:
+      type: string
+      enum: [USDC, XLM]
+    Batch:
+      type: object
+      required: [id, commodityType, weightKg, grade, harvestDate, expiryDate, status, warehouseId, warehouseName, warehouseLocation, createdAt, updatedAt]
+      properties:
+        id: {type: string}
+        commodityType:
+          $ref: "#/components/schemas/CommodityType"
+        weightKg: {type: number, format: float}
+        grade: {type: string}
+        harvestDate: {type: string, format: date}
+        expiryDate: {type: string, format: date}
+        assetCode: {type: [string, "null"]}
+        issuerPublicKey: {type: [string, "null"]}
+        status:
+          $ref: "#/components/schemas/BatchStatus"
+        warehouseId: {type: string}
+        warehouseName: {type: string}
+        warehouseLocation: {type: string}
+        cooperativeId: {type: [string, "null"]}
+        description: {type: [string, "null"]}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    CreateBatchRequest:
+      type: object
+      required: [commodityType, weightKg, grade, harvestDate, expiryDate, warehouseId]
+      properties:
+        commodityType:
+          $ref: "#/components/schemas/CommodityType"
+        weightKg: {type: number, format: float, minimum: 0}
+        grade: {type: string}
+        harvestDate: {type: string, format: date}
+        expiryDate: {type: string, format: date}
+        warehouseId: {type: string}
+        cooperativeId: {type: string}
+        description: {type: string}
+    TokenizeRequest:
+      type: object
+      required: [assetCode, issuerPublicKey]
+      properties:
+        assetCode: {type: string, minLength: 4, maxLength: 12}
+        issuerPublicKey: {type: string}
+        distributorPublicKey: {type: string}
+    SettleRequest:
+      type: object
+      required: [saleProceedsAmount, settlementCurrency]
+      properties:
+        saleProceedsAmount: {type: string}
+        settlementCurrency:
+          $ref: "#/components/schemas/SettlementCurrency"
+        buyerReference: {type: string}
+    RedemptionRequest:
+      type: object
+      required: [quantityKg, deliveryAddress, requestedDate]
+      properties:
+        quantityKg: {type: number, format: float, minimum: 0}
+        deliveryAddress: {type: string}
+        requestedDate: {type: string, format: date}
+    Investor:
+      type: object
+      required: [address, balance, trustlineStatus, kycStatus, approvedAt]
+      properties:
+        address: {type: string}
+        balance: {type: string}
+        trustlineStatus:
+          type: string
+          enum: [authorized, frozen, pending]
+        kycStatus:
+          type: string
+          enum: [pending, passed, failed]
+        approvedAt: {type: [string, "null"], format: date-time}
+    SettlementEvent:
+      type: object
+      required: [id, batchId, assetCode, saleProceedsAmount, settlementCurrency, holderCount, txHash, settledAt]
+      properties:
+        id: {type: string}
+        batchId: {type: string}
+        assetCode: {type: string}
+        saleProceedsAmount: {type: string}
+        settlementCurrency:
+          $ref: "#/components/schemas/SettlementCurrency"
+        holderCount: {type: integer, minimum: 0}
+        txHash: {type: [string, "null"]}
+        settledAt: {type: string, format: date-time}
+    BulkApproveRequest:
+      type: object
+      required: [addresses]
+      properties:
+        addresses:
+          type: array
+          items:
+            type: string
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message: {type: string}
+        code: {type: string}
+    BatchDocument:
+      type: object
+      required: [id, batchId, type, fileName, sha256, createdAt]
+      properties:
+        id: {type: string}
+        batchId: {type: string}
+        type:
+          $ref: "#/components/schemas/DocumentType"
+        fileName: {type: string}
+        sha256: {type: string}
+        createdAt: {type: string, format: date-time}
+    RedemptionRecord:
+      type: object
+      required: [id, batchId, investorAddress, quantityKg, deliveryAddress, requestedDate, status, voucherHash, createdAt]
+      properties:
+        id: {type: string}
+        batchId: {type: string}
+        investorAddress: {type: string}
+        quantityKg: {type: number, format: float}
+        deliveryAddress: {type: string}
+        requestedDate: {type: string, format: date}
+        status:
+          $ref: "#/components/schemas/RedemptionStatus"
+        voucherHash: {type: [string, "null"]}
+        createdAt: {type: string, format: date-time}
+    Cooperative:
+      type: object
+      required: [id, name, country, issuerPublicKey, cooperativeCutBps]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        country: {type: string}
+        issuerPublicKey: {type: string}
+        cooperativeCutBps: {type: integer, minimum: 0, maximum: 10000}
+    CreateCooperativeRequest:
+      type: object
+      required: [name, country, issuerPublicKey, cooperativeCutBps]
+      properties:
+        name: {type: string}
+        registrationNumber: {type: string}
+        country: {type: string}
+        description: {type: string}
+        issuerPublicKey: {type: string}
+        cooperativeCutBps: {type: integer, minimum: 0, maximum: 10000}
+    PurchaseRequest:
+      type: object
+      required: [quantity, currency]
+      properties:
+        quantity: {type: string}
+        currency:
+          $ref: "#/components/schemas/SettlementCurrency"
+    TransactionResult:
+      type: object
+      required: [txHash, ledger, successful]
+      properties:
+        txHash: {type: string}
+        ledger: {type: integer}
+        successful: {type: boolean}
+    Portfolio:
+      type: object
+      required: [totalBatches, totalInvested, holdings]
+      properties:
+        totalBatches: {type: integer}
+        totalInvested: {type: string}
+        holdings:
+          type: array
+          items:
+            type: object
+            required: [batchId, assetCode, commodityType, balance, estimatedValue, batchStatus]
+            properties:
+              batchId: {type: string}
+              assetCode: {type: string}
+              commodityType: {type: string}
+              balance: {type: string}
+              estimatedValue: {type: [string, "null"]}
+              batchStatus: {type: string}
+    TomlResponse:
+      type: object
+      required: [toml]
+      properties:
+        toml: {type: string}
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message: {type: string}
