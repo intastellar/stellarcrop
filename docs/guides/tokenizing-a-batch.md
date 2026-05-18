@@ -18,11 +18,11 @@ Stellar native asset issuance does not require a smart contract. The Warehouse i
 
 ## Compliance Flags
 
-| Flag | Default | Meaning for StellarCrop |
-|---|---|---|
-| Authorization Required | On | Investors must be KYC-approved before receiving tokens. |
-| Authorization Revocable | On | The Warehouse can freeze an Investor trustline during a dispute. |
-| Clawback Enabled | On | The Warehouse can recover tokens during Settlement or Redemption. |
+| Flag                    | Default | Meaning for StellarCrop                                           |
+| ----------------------- | ------- | ----------------------------------------------------------------- |
+| Authorization Required  | On      | Investors must be KYC-approved before receiving tokens.           |
+| Authorization Revocable | On      | The Warehouse can freeze an Investor trustline during a dispute.  |
+| Clawback Enabled        | On      | The Warehouse can recover tokens during Settlement or Redemption. |
 
 These are Stellar protocol-level controls on the issuer account.
 

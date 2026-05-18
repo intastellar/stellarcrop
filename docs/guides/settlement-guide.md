@@ -15,11 +15,11 @@ Confirm:
 
 ## The Settle Form
 
-| Field | Description |
-|---|---|
+| Field                | Description                                      |
+| -------------------- | ------------------------------------------------ |
 | Sale proceeds amount | Total proceeds received from the Commodity sale. |
-| Settlement currency | USDC is preferred; XLM is the fallback. |
-| Buyer reference | Optional internal reference for your records. |
+| Settlement currency  | USDC is preferred; XLM is the fallback.          |
+| Buyer reference      | Optional internal reference for your records.    |
 
 ## What Happens On Settle
 
@@ -42,8 +42,8 @@ The Batch is closed. Holders can view received proceeds in Freighter or Stellar 
 
 ## Edge Cases
 
-| Case | Behaviour |
-|---|---|
-| Holder account is closed | Proceeds for that address are returned to the distributor. |
-| Settlement fails mid-way | Partial settlements are logged and can be retried. |
-| Unsold tokens remain with distributor | Unallocated supply is not distributed to Investors. |
+| Case                                  | Behaviour                                                  |
+| ------------------------------------- | ---------------------------------------------------------- |
+| Holder account is closed              | Proceeds for that address are returned to the distributor. |
+| Settlement fails mid-way              | Partial settlements are logged and can be retried.         |
+| Unsold tokens remain with distributor | Unallocated supply is not distributed to Investors.        |
