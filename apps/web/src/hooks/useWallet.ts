@@ -1,4 +1,5 @@
-// TODO: implement
+import { useWalletStore } from '@/store/walletStore'
+
 export function useWallet() {
-  return null
+  return useWalletStore()
 }
