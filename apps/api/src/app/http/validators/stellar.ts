@@ -41,44 +41,44 @@ type ValidatedAddressPayload<TSpec extends readonly FieldSpec[]> = {
   [K in TSpec[number]['field']]?: string
 }
 
-const tokenParamsSpecs = [{ field: 'distributorPublicKey' }] as const
-const cooperativeSpecs = [{ field: 'cooperativeTreasuryAddress' }] as const
-const investorSpecs = [{ field: 'investorAddress' }] as const
-const operatorSpecs = [{ field: 'operatorAddress' }] as const
-const warehouseSpecs = [{ field: 'warehouseAddress' }] as const
+const operatorAddressSpecs = [{ field: 'operatorAddress' }] as const
+const warehouseAddressSpecs = [{ field: 'warehouseAddress' }] as const
+const distributorAddressSpecs = [{ field: 'distributorPublicKey' }] as const
+const investorAddressSpecs = [{ field: 'investorAddress' }] as const
+const cooperativeTreasurySpecs = [{ field: 'cooperativeTreasuryAddress' }] as const
 
-export function isValidStellarPublicKey(value: string): boolean {
-  return StrKey.isValidEd25519PublicKey(value)
-}
-
-export function validateTokenParamsAddresses(
-  input: unknown
-): ValidationResult<{ distributorPublicKey?: string }> {
-  return validateStellarAddressPayload(input, tokenParamsSpecs)
-}
-
-export function validateCooperativeAddresses(
-  input: unknown
-): ValidationResult<{ cooperativeTreasuryAddress?: string }> {
-  return validateStellarAddressPayload(input, cooperativeSpecs)
-}
-
-export function validateInvestorAddresses(
-  input: unknown
-): ValidationResult<{ investorAddress?: string }> {
-  return validateStellarAddressPayload(input, investorSpecs)
-}
-
-export function validateOperatorAddresses(
+export function validateOperatorAddressPayload(
   input: unknown
 ): ValidationResult<{ operatorAddress?: string }> {
-  return validateStellarAddressPayload(input, operatorSpecs)
+  return validateStellarAddressPayload(input, operatorAddressSpecs)
 }
 
-export function validateWarehouseAddresses(
+export function validateWarehouseAddressPayload(
   input: unknown
 ): ValidationResult<{ warehouseAddress?: string }> {
-  return validateStellarAddressPayload(input, warehouseSpecs)
+  return validateStellarAddressPayload(input, warehouseAddressSpecs)
+}
+
+export function validateDistributorAddressPayload(
+  input: unknown
+): ValidationResult<{ distributorPublicKey?: string }> {
+  return validateStellarAddressPayload(input, distributorAddressSpecs)
+}
+
+export function validateInvestorAddressPayload(
+  input: unknown
+): ValidationResult<{ investorAddress?: string }> {
+  return validateStellarAddressPayload(input, investorAddressSpecs)
+}
+
+export function validateCooperativeTreasuryPayload(
+  input: unknown
+): ValidationResult<{ cooperativeTreasuryAddress?: string }> {
+  return validateStellarAddressPayload(input, cooperativeTreasurySpecs)
+}
+
+export function validateRouteAddress(address: unknown): ValidationResult<string> {
+  return validateStellarPublicKey(address, 'address')
 }
 
 export function validateStellarAddressPayload<TSpec extends readonly FieldSpec[]>(
@@ -145,7 +145,7 @@ export function validateStellarPublicKey(value: unknown, field: string): Validat
     return invalid(field, 'unsafe_value', `${field} cannot include whitespace`)
   }
 
-  if (!isValidStellarPublicKey(value)) {
+  if (!StrKey.isValidEd25519PublicKey(value)) {
     return invalid(field, 'invalid_stellar_address', `${field} must be a valid Stellar public key`)
   }
 
